@@ -56,8 +56,13 @@ index_return = (index_df['Percent Change'] + 1).cumprod()[-1]
 for ticker in tickers:
     # Download historical data as CSV for each stock (makes the process faster)
     print('starting with ticker: {ticker}')
-    df = pdr.get_data_yahoo(ticker, start_date, end_date)
-    df.to_csv(f'{ticker}.csv')
+    if os.path.exists(f'{ticker}.csv'):
+        df = pd.read_csv(f'{ticker}.csv', index_col=0)      
+        print('Read CSV: {ticker}')  
+    else:
+        df = pdr.get_data_yahoo(ticker, start_date, end_date)
+        df.to_csv(f'{ticker}.csv')
+        print('Yahhoo CSV: {ticker}')  
     
 
     # Calculating returns relative to the market (returns multiple)
