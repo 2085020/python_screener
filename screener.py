@@ -84,7 +84,7 @@ rs_stocks = rs_df['Ticker']
 for stock in rs_stocks:    
     try:
         df = pd.read_csv(f'{stock}.csv', index_col=0)
-        sma = [50, 150, 200]
+        sma = [5, 10, 30, 50, 150, 200]
         for x in sma:
             df["SMA_"+str(x)] = round(df['Adj Close'].rolling(window=x).mean(), 2)
         
@@ -95,6 +95,9 @@ for stock in rs_stocks:
         moving_average_50 = df["SMA_50"][-1]
         moving_average_150 = df["SMA_150"][-1]
         moving_average_200 = df["SMA_200"][-1]
+        moving_average_5 = df["SMA_5"][-1]
+        moving_average_10 = df["SMA_10"][-1]
+        moving_average_30 = df["SMA_30"][-1]
         avg_vol = df["AVGVOL"][-1]
         low_of_52week = round(min(df["Low"][-260:]), 2)
         high_of_52week = round(max(df["High"][-260:]), 2)
@@ -150,6 +153,12 @@ for stock in rs_stocks:
 
         # Condition 12: Current Close > 52 week close
         condition_12 = currentClose >= high_of_52week
+
+        # Condition 13: MA 5, 10, 30 cerca
+        dist1 = abs(currentClose - moving_average_10)
+        dist2 = abs(currentClose - moving_average_30)
+        dist3 = abs(dist1 - dist2)
+        condition_13 = (dist3 / currentClose) * 100 < 5
 
         # If all conditions above are true, add stock to exportList
         if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9):
