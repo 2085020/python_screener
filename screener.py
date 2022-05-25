@@ -1,4 +1,11 @@
 # Imports
+
+#Pending
+#Volumen de los últimos 10-20 días de los que sobrepasan la VMA50. Siendo el volumen de la suma de todos estos superior a un 200% de la VMA50
+#Acción dentro de un rango del <20% durante los últimos 10 días
+#Acción no más lejos del 20% de la MA50
+#Últimos 3 días en un rango del 8%
+
 #py -m pip install pandas_datareader
 from pandas_datareader import data as pdr
 from yahoo_fin import stock_info as si
@@ -9,6 +16,7 @@ import datetime
 import time
 import os
 import glob
+import math
 
 if os.path.exists("ScreenOutput.xlsx"):
     os.remove("ScreenOutput.xlsx")
@@ -38,15 +46,16 @@ yf.pdr_override()
 # Variables
 #tickers = si.tickers_sp500()
 #tickers = [item.replace(".", "-") for item in tickers] # Yahoo Finance uses dashes instead of dots
-#tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA']
-#tickers = ['CTVA']
-
 # Variables
 # NYSE & NASDAQ
 csv_path = "nasdaq_tickers.csv"
 df_stocks = pd.read_csv(csv_path)
 df_stocks = df_stocks[df_stocks.MarketCap >= 600000000]
 tickers = df_stocks['Symbol']
+#tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY']
+#tickers = ['BMY']
+#tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
+
 
 index_name = '^GSPC' # S&P 500
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
@@ -92,7 +101,7 @@ rs_stocks = rs_df['Ticker']
 for stock in rs_stocks:    
     try:
         df = pd.read_csv(f'{stock}.csv', index_col=0)
-        sma = [5, 10, 30, 50, 150, 200]
+        sma = [5, 10, 20, 30, 50, 150, 200]
         for x in sma:
             df["SMA_"+str(x)] = round(df['Adj Close'].rolling(window=x).mean(), 2)
         
@@ -106,6 +115,7 @@ for stock in rs_stocks:
         moving_average_5 = df["SMA_5"][-1]
         moving_average_10 = df["SMA_10"][-1]
         moving_average_30 = df["SMA_30"][-1]
+        moving_average_20 = df["SMA_20"][-1]
         avg_vol = df["AVGVOL"][-1]
         low_of_52week = round(min(df["Low"][-260:]), 2)
         high_of_52week = round(max(df["High"][-260:]), 2)
@@ -114,6 +124,7 @@ for stock in rs_stocks:
         low_of_3day = round(min(df["Low"][-3:]), 2)
         high_of_3day = round(max(df["High"][-3:]), 2)
         
+        stDev = df["Adj Close"][-21:].std()
 
 
         RS_Rating = round(rs_df[rs_df['Ticker']==stock].RS_Rating.tolist()[0])
@@ -162,21 +173,21 @@ for stock in rs_stocks:
         # Condition 12: Current Close > 52 week close
         condition_12 = currentClose >= high_of_52week
 
-        # Condition 13: MA 5, 10, 30 cerca
-        dist1 = abs(currentClose - moving_average_10)
-        dist2 = abs(currentClose - moving_average_30)
-        dist3 = abs(dist1 - dist2)
-        condition_13 = (dist3 / currentClose) * 100 < 5
+        # Condition 13: 3% hasta la media de 20
+        condition_13 = (abs(currentClose - moving_average_20)/currentClose)*100 < 3
+
+        # Condition 14: 5% hasta la media de 30
+        condition_14 = (abs(currentClose - moving_average_30)/currentClose)*100 < 5
 
         # If all conditions above are true, add stock to exportList
-        if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9):
+        if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_13):
             exportList = exportList.append({'Stock': stock, "RS_Rating": RS_Rating ,"50 Day MA": moving_average_50, "150 Day Ma": moving_average_150, "200 Day MA": moving_average_200, "52 Week Low": low_of_52week, "52 week High": high_of_52week}, ignore_index=True)
             print (stock + " made the Minervini requirements")
             f = open("watchlist_python", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0 and condition_10):
+        if (condition_0 and condition_10 and condition_13):
             f = open("watchlist_python_near_52", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
@@ -204,7 +215,8 @@ writer.save()
 fileList = glob.glob("*.csv")
 for filePath in fileList:
     try:
-        os.remove(filePath)
+        if (filePath.find("tickers")==-1):
+            os.remove(filePath)
         #print(filePath)
         #print("\n")
     except:
