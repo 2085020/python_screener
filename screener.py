@@ -36,10 +36,18 @@ f.close()
 yf.pdr_override()
 
 # Variables
-tickers = si.tickers_sp500()
-tickers = [item.replace(".", "-") for item in tickers] # Yahoo Finance uses dashes instead of dots
+#tickers = si.tickers_sp500()
+#tickers = [item.replace(".", "-") for item in tickers] # Yahoo Finance uses dashes instead of dots
 #tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA']
 #tickers = ['CTVA']
+
+# Variables
+# NYSE & NASDAQ
+csv_path = "nasdaq_tickers.csv"
+df_stocks = pd.read_csv(csv_path)
+df_stocks = df_stocks[df_stocks.MarketCap >= 600000000]
+tickers = df_stocks['Symbol']
+
 index_name = '^GSPC' # S&P 500
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
 end_date = datetime.date.today()
