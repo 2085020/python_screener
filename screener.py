@@ -1,6 +1,5 @@
 # Imports
 #py -m pip install pandas_datareader
-from audioop import avg
 from pandas_datareader import data as pdr
 from yahoo_fin import stock_info as si
 from pandas import ExcelWriter
@@ -16,22 +15,22 @@ if os.path.exists("ScreenOutput.xlsx"):
 
 f = open("watchlist_python", "w")
 f.write("COLUMN,0\n")
-f.write("HED,Python WhatchList\n")
+f.write("HED,Minervini WhatchList\n")
 f.close()
 
 f = open("watchlist_python_near_52", "w")
 f.write("COLUMN,0\n")
-f.write("HED,Python WhatchList\n")
+f.write("HED,Near High WhatchList\n")
 f.close()
 
 f = open("watchlist_python_big_volume", "w")
 f.write("COLUMN,0\n")
-f.write("HED,Python WhatchList\n")
+f.write("HED,Big Volume WhatchList\n")
 f.close()
 
 f = open("watchlist_python_new_max", "w")
 f.write("COLUMN,0\n")
-f.write("HED,Python WhatchList\n")
+f.write("HED,New Max WhatchList\n")
 f.close()
 
 yf.pdr_override()
