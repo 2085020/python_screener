@@ -17,11 +17,26 @@ import time
 import os
 import glob
 import math
+from functions import *
+
+#https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download
+#https://www.nasdaq.com/market-activity/stocks/screener?exchange=NYSE&render=download
+
+descarga = False
+borrado = True
 
 if os.path.exists("ScreenOutput.xlsx"):
     os.remove("ScreenOutput.xlsx")
 
-f = open("watchlist_python", "w")
+if os.path.exists("ScreenOutput2.xlsx"):
+    os.remove("ScreenOutput2.xlsx")
+
+f = open("watchlist_python_minervini_earnings", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Minervini WhatchList\n")
+f.close()
+
+f = open("watchlist_python_minervini", "w")
 f.write("COLUMN,0\n")
 f.write("HED,Minervini WhatchList\n")
 f.close()
@@ -48,31 +63,42 @@ yf.pdr_override()
 #tickers = [item.replace(".", "-") for item in tickers] # Yahoo Finance uses dashes instead of dots
 # Variables
 # NYSE & NASDAQ
-csv_path = "nasdaq_tickers.csv"
+
+csv_path = "nasdaq_screener.csv"
 df_stocks = pd.read_csv(csv_path)
-df_stocks = df_stocks[df_stocks.MarketCap >= 600000000]
+df_stocks = df_stocks[df_stocks.MarketCap >= 400000000]
+df_stocks = df_stocks[df_stocks.Volume > 200000]
 tickers = df_stocks['Symbol']
-#tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY']
+"""
+#tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY', 'XOM']
 #tickers = ['BMY']
 #tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
-
-
-index_name = '^GSPC' # S&P 500
+"""
+tickers = ['BMY']
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
 end_date = datetime.date.today()
 exportList = pd.DataFrame(columns=['Stock', "RS_Rating", "50 Day MA", "150 Day Ma", "200 Day MA", "52 Week Low", "52 week High"])
+exportList2 = pd.DataFrame(columns=['Stock', "RS_Rating", "50 Day MA", "150 Day Ma", "200 Day MA", "52 Week Low", "52 week High"])
 returns_multiples = []
 
 # Index Returns
-index_df = pdr.get_data_yahoo(index_name, start_date, end_date)
+# ALL INDEXES
+index_name = '^GSPC' # S&P 500
+index_sp = pdr.get_data_yahoo(index_name, start_date, end_date)
+index_name = '^NYA' # NYSE
+index_nya = pdr.get_data_yahoo(index_name, start_date, end_date)
+index_name = '^IXIC' # NASDAQ COMPOSITE
+index_ixic = pdr.get_data_yahoo(index_name, start_date, end_date)
+index_df = index_nya + index_ixic + index_sp
+
 index_df['Percent Change'] = index_df['Adj Close'].pct_change()
 index_return = (index_df['Percent Change'] + 1).cumprod()[-1]
 
 # Find top 30% performing stocks (relative to the S&P 500)
 for ticker in tickers:
     # Download historical data as CSV for each stock (makes the process faster)
-    print('starting with ticker: {ticker}')
-    if os.path.exists(f'{ticker}.csv'):
+    print(f'starting with ticker: {ticker}')
+    if not descarga and os.path.exists(f'{ticker}.csv'):
         df = pd.read_csv(f'{ticker}.csv', index_col=0)      
         print('Read CSV: {ticker}')  
     else:
@@ -84,17 +110,25 @@ for ticker in tickers:
     # Calculating returns relative to the market (returns multiple)
     df['Percent Change'] = df['Adj Close'].pct_change()
     stock_return = (df['Percent Change'] + 1).cumprod()[-1]
-    
-    returns_multiple = round((stock_return / index_return), 2)
-    returns_multiples.extend([returns_multiple])
+    stock_return_ad = float(stock_return)
+
+    if math.isnan(stock_return_ad):
+        tickers.remove(ticker)
+        print("Ticker Removed: " + ticker)
+    else: 
+        returns_multiple = round((stock_return / index_return), 2)
+        returns_multiples.extend([returns_multiple])
     
     print (f'Ticker: {ticker}; Returns Multiple against S&P 500: {returns_multiple}\n')
-    time.sleep(1)
+    time.sleep(0.1)
 
-# Creating dataframe of only top 30%
+# Creating dataframe of only top 20%
+valueRating = 0.8
+#Creating dataframe of only top 30%
+valueRating = 0.7
 rs_df = pd.DataFrame(list(zip(tickers, returns_multiples)), columns=['Ticker', 'Returns_multiple'])
 rs_df['RS_Rating'] = rs_df.Returns_multiple.rank(pct=True) * 100
-rs_df = rs_df[rs_df.RS_Rating >= rs_df.RS_Rating.quantile(.70)]
+rs_df = rs_df[rs_df.RS_Rating >= rs_df.RS_Rating.quantile(valueRating)]
 
 # Checking Minervini conditions of top 30% of stocks in given list
 rs_stocks = rs_df['Ticker']
@@ -134,8 +168,11 @@ for stock in rs_stocks:
         except Exception:
             moving_average_200_20 = 0
 
+        # Condition 0: Average volume > 200.000
+        condition_0 = avg_vol > 200000
+
         # Condition 0: Average volume > 500.000
-        condition_0 = avg_vol > 500000
+        condition_0b = avg_vol > 500000
 
         # Condition 1: Current Price > 150 SMA and > 200 SMA
         condition_1 = currentClose > moving_average_150 > moving_average_200
@@ -162,42 +199,64 @@ for stock in rs_stocks:
         condition_8 = ((high_of_21day-low_of_21day)/high_of_21day)*100 < 25
 
         # Condition 9: 3 days volatility < 5%
-        condition_9 = ((high_of_3day-low_of_3day)/high_of_3day)*100 < 5
+        condition_9 = ((high_of_3day-low_of_3day)/high_of_3day)*100 < 10
 
-        # Condition 10: 4% hasta maximos de 52 w
-        condition_10 = ((high_of_52week - currentClose) > 0) and (((high_of_52week-currentClose)/currentClose)*100 < 4)
+        # Condition 10: más de un 3% hasta maximos de 52 w
+        condition_10 = ((high_of_52week - currentClose) > 0) and (((high_of_52week-currentClose)/high_of_52week)*100 > 3)
+
+        # Condition 10: 8% hasta maximos de 52 w
+        condition_10b = ((high_of_52week - currentClose) > 0) and (((high_of_52week-currentClose)/currentClose)*100 < 8)
+        
+        # Condition 11: Current Price not far than a 15% from 50 SMA
+        condition_11 = currentClose < moving_average_50*1.15
 
         # Condition 11: Extra volume
-        condition_11 = lastDayVolume > (2 * avg_vol)
+        condition_12 = lastDayVolume > (2 * avg_vol)
 
         # Condition 12: Current Close > 52 week close
-        condition_12 = currentClose >= high_of_52week
+        condition_13 = currentClose >= high_of_52week
 
         # Condition 13: 3% hasta la media de 20
-        condition_13 = (abs(currentClose - moving_average_20)/currentClose)*100 < 3
+        #condition_13 = (abs(currentClose - moving_average_20)/currentClose)*100 < 3
 
         # Condition 14: 5% hasta la media de 30
-        condition_14 = (abs(currentClose - moving_average_30)/currentClose)*100 < 5
+        #condition_14 = (abs(currentClose - moving_average_30)/currentClose)*100 < 5
 
         # If all conditions above are true, add stock to exportList
-        if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_13):
-            exportList = exportList.append({'Stock': stock, "RS_Rating": RS_Rating ,"50 Day MA": moving_average_50, "150 Day Ma": moving_average_150, "200 Day MA": moving_average_200, "52 Week Low": low_of_52week, "52 week High": high_of_52week}, ignore_index=True)
-            print (stock + " made the Minervini requirements")
-            f = open("watchlist_python", "a")
-            f.write(f"SYM,{stock},SMART/AMEX,\n")
-            f.close()
+        if(condition_0b and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_10 and condition_10b and condition_11):
+        #if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_13):
+            exportList2 = exportList2.append({'Stock': stock, "RS_Rating": RS_Rating ,"50 Day MA": moving_average_50, "150 Day Ma": moving_average_150, "200 Day MA": moving_average_200, "52 Week Low": low_of_52week, "52 week High": high_of_52week}, ignore_index=True)
+            
+            print("Minervini for stock" + stock)
+            print("calculate EPS:"+stock)
+            epsGrowth = calculateEPS(stock)
+            print("calculate Sales:"+stock)
+            salesGrowth = calculateRevenueGrowth(stock)
+            print("End calculate:"+stock)
+                
+            if (epsGrowth > 10 and salesGrowth > 10):
+                exportList = exportList.append({'Stock': stock, "RS_Rating": RS_Rating ,"50 Day MA": moving_average_50, "150 Day Ma": moving_average_150, "200 Day MA": moving_average_200, "52 Week Low": low_of_52week, "52 week High": high_of_52week}, ignore_index=True)
+                print (stock + " made the Minervini requirements + earnings")
+                f = open("watchlist_python_minervini_earnings", "a")
+                f.write(f"SYM,{stock},SMART/AMEX,\n")
+                f.close()
+            else:
+                print (stock + " made the Minervini requirements")
+                f = open("watchlist_python_minervini", "a")
+                f.write(f"SYM,{stock},SMART/AMEX,\n")
+                f.close()
 
-        if (condition_0 and condition_10 and condition_13):
+        if (condition_0b and condition_10b):
             f = open("watchlist_python_near_52", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0 and condition_11):
+        if (condition_0 and condition_12):
             f = open("watchlist_python_big_volume", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
         
-        if (condition_0 and condition_12):
+        if (condition_0 and condition_13):
             f = open("watchlist_python_new_max", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
@@ -208,17 +267,25 @@ for stock in rs_stocks:
 
 exportList = exportList.sort_values(by='RS_Rating', ascending=False)
 print('\n', exportList)
+
+exportList2 = exportList2.sort_values(by='RS_Rating', ascending=False)
+print('\n', exportList2)
 writer = ExcelWriter("ScreenOutput.xlsx")
 exportList.to_excel(writer, "Sheet1")
 writer.save()
 
-fileList = glob.glob("*.csv")
-for filePath in fileList:
-    try:
-        if (filePath.find("tickers")==-1):
-            os.remove(filePath)
-        #print(filePath)
-        #print("\n")
-    except:
-        print("Error while deleting file : ", filePath)
+writer2 = ExcelWriter("ScreenOutput2.xlsx")
+exportList2.to_excel(writer2, "Sheet1")
+writer2.save()
+
+if borrado:
+    fileList = glob.glob("*.csv")
+    for filePath in fileList:
+        try:
+            if (filePath.find("screener")==-1):
+                os.remove(filePath)
+            #print(filePath)
+            #print("\n")
+        except:
+            print("Error while deleting file : ", filePath)
 
