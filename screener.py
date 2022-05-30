@@ -33,7 +33,7 @@ if os.path.exists("ScreenOutput2.xlsx"):
 
 f = open("watchlist_python_minervini_earnings", "w")
 f.write("COLUMN,0\n")
-f.write("HED,Minervini WhatchList\n")
+f.write("HED,Minervini WhatchList Earnings\n")
 f.close()
 
 f = open("watchlist_python_minervini", "w")
@@ -56,6 +56,27 @@ f.write("COLUMN,0\n")
 f.write("HED,New Max WhatchList\n")
 f.close()
 
+f = open("watchlist_python_bullish_inside", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Bullish Inside WhatchList\n")
+f.close()
+
+f = open("watchlist_python_bearish_inside", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Bearish Inside WhatchList\n")
+f.close()
+
+f = open("watchlist_python_bullish_engulfing", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Bullish Eng WhatchList\n")
+f.close()
+
+f = open("watchlist_python_bearish_engulfing", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Bear Eng WhatchList\n")
+f.close()
+
+
 yf.pdr_override()
 
 # Variables
@@ -74,7 +95,7 @@ tickers = df_stocks['Symbol']
 #tickers = ['BMY']
 #tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
 """
-
+tickers = ['GLNG', 'JNJ']
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
 end_date = datetime.date.today()
 exportList = pd.DataFrame(columns=['Stock', "RS_Rating", "50 Day MA", "150 Day Ma", "200 Day MA", "52 Week Low", "52 week High"])
@@ -157,6 +178,13 @@ for stock in rs_stocks:
         high_of_21day = round(max(df["High"][-21:-4]), 2)
         low_of_3day = round(min(df["Low"][-3:]), 2)
         high_of_3day = round(max(df["High"][-3:]), 2)
+
+        high_of_2day = round(df["High"][-2], 2)
+        low_of_2day = round(df["Low"][-2], 2)
+        high_of_1day = round(df["High"][-1], 2)
+        low_of_1day = round(df["Low"][-1], 2)
+        lastOpen = round(df["Open"][-1], 2)
+        lastClose = round(df["Close"][-1], 2)
         
         stDev = df["Adj Close"][-21:].std()
 
@@ -210,11 +238,23 @@ for stock in rs_stocks:
         # Condition 11: Current Price not far than a 15% from 50 SMA
         condition_11 = currentClose < moving_average_50*1.15
 
-        # Condition 11: Extra volume
+        # Condition 12: Extra volume
         condition_12 = lastDayVolume > (2 * avg_vol)
 
-        # Condition 12: Current Close > 52 week close
+        # Condition 13: Current Close > 52 week close
         condition_13 = currentClose >= high_of_52week
+
+        #Condition 14: Bullish inside day
+        Condition_14BuI = high_of_2day > high_of_1day and low_of_2day < low_of_1day and lastOpen < lastClose
+
+        #Condition 14: Bearish inside day
+        Condition_14BeI = high_of_2day > high_of_1day and low_of_2day < low_of_1day and lastOpen > lastClose
+
+        #Condition 14: Bullish engulfing 
+        Condition_14BuE = high_of_2day < lastClose and low_of_2day > lastOpen
+
+        #Condition 14: Bearish engulfing
+        Condition_14BeE = high_of_2day < lastOpen and low_of_2day > lastClose
 
         # Condition 13: 3% hasta la media de 20
         #condition_13 = (abs(currentClose - moving_average_20)/currentClose)*100 < 3
@@ -260,6 +300,27 @@ for stock in rs_stocks:
             f = open("watchlist_python_new_max", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
+
+        if (condition_0b and Condition_14BuI):
+            f = open("watchlist_python_bullish_inside", "a")
+            f.write(f"SYM,{stock},SMART/AMEX,\n")
+            f.close()
+
+        if (condition_0b and Condition_14BeI):
+            f = open("watchlist_python_bearish_inside", "a")
+            f.write(f"SYM,{stock},SMART/AMEX,\n")
+            f.close()
+        
+        if (condition_0b and Condition_14BuE):
+            f = open("watchlist_python_bullish_engulfing", "a")
+            f.write(f"SYM,{stock},SMART/AMEX,\n")
+            f.close()
+
+        if (condition_0b and Condition_14BeE):
+            f = open("watchlist_python_bearish_engulfing", "a")
+            f.write(f"SYM,{stock},SMART/AMEX,\n")
+            f.close()
+
 
     except Exception as e:
         print (e)
