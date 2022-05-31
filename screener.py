@@ -96,7 +96,6 @@ tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY', 'XOM']
 tickers = ['BMY']
 tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
 """
-tickers = ['BMY']
 
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
 end_date = datetime.date.today()
