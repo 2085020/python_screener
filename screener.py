@@ -89,12 +89,14 @@ csv_path = "nasdaq_screener.csv"
 df_stocks = pd.read_csv(csv_path)
 df_stocks = df_stocks[df_stocks.MarketCap >= 400000000]
 df_stocks = df_stocks[df_stocks.Volume > 200000]
+myvalue = df_stocks[df_stocks.Symbol == 'AAPL']
 tickers = df_stocks['Symbol']
 """
-#tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY', 'XOM']
-#tickers = ['BMY']
-#tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
+tickers = ['A', 'AAL', 'AAPL', 'SLB', 'CTVA', 'BMY', 'XOM']
+tickers = ['BMY']
+tickers = ['ACC','AEE','AEP','AMCR','AMGN','AMX','APA','APTS','AR','ARLP','ASZ','ATRS','BMY','CDK','CERN','CHK','CHNG','CI','CIVI','CMS','CNC','CNR','COP','CPG','CRHC','CTRA','CTVA','CVBF','CVE','CVX','DINO','DOX','DUK','DVN','ED','ELP','EOG','EPD','EQT','ES','EXC','FTS','GO','HES','HOLX','HRB','IMO','JNJ','LLY','MCK','MPC','MRK','MRO','MSP','MTOR','NJR','NRG','NTCT','NTUS','NVS','ORAN','POST','PPC','PPL','PSX','PXD','SAIL','SBLK','SD','SFL','SHEL','SJI','SNY','SO','SQM','SRRA','STNG','SU','SWCH','SWX','TEF','TRP','TS','TVTY','WEC','WMB','XEL','XOM']
 """
+tickers = ['BMY']
 
 start_date = datetime.datetime.now() - datetime.timedelta(days=365)
 end_date = datetime.date.today()
@@ -196,6 +198,9 @@ for stock in rs_stocks:
         except Exception:
             moving_average_200_20 = 0
 
+        #Condition price: Prices should be greater than 15$
+        condition_price = currentClose > 15
+
         # Condition 0: Average volume > 200.000
         condition_0 = avg_vol > 200000
 
@@ -263,7 +268,7 @@ for stock in rs_stocks:
         #condition_14 = (abs(currentClose - moving_average_30)/currentClose)*100 < 5
 
         # If all conditions above are true, add stock to exportList
-        if(condition_0b and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_10 and condition_10b and condition_11):
+        if(condition_price and condition_0b and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_10 and condition_10b and condition_11):
         #if(condition_0 and condition_1 and condition_2 and condition_3 and condition_4 and condition_5 and condition_6 and condition_7 and condition_8 and condition_9 and condition_13):
             exportList2 = exportList2.append({'Stock': stock, "RS_Rating": RS_Rating ,"50 Day MA": moving_average_50, "150 Day Ma": moving_average_150, "200 Day MA": moving_average_200, "52 Week Low": low_of_52week, "52 week High": high_of_52week}, ignore_index=True)
             
@@ -286,37 +291,37 @@ for stock in rs_stocks:
                 f.write(f"SYM,{stock},SMART/AMEX,\n")
                 f.close()
 
-        if (condition_0b and condition_10b):
+        if (condition_price and condition_0b and condition_10b):
             f = open("watchlist_python_near_52", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0 and condition_12):
+        if (condition_price and condition_0 and condition_12):
             f = open("watchlist_python_big_volume", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
         
-        if (condition_0 and condition_13):
+        if (condition_price and condition_0 and condition_13):
             f = open("watchlist_python_new_max", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0b and Condition_14BuI):
+        if (condition_price and condition_0b and Condition_14BuI):
             f = open("watchlist_python_bullish_inside", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0b and Condition_14BeI):
+        if (condition_price and condition_0b and Condition_14BeI):
             f = open("watchlist_python_bearish_inside", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
         
-        if (condition_0b and Condition_14BuE):
+        if (condition_price and condition_0b and Condition_14BuE):
             f = open("watchlist_python_bullish_engulfing", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
 
-        if (condition_0b and Condition_14BeE):
+        if (condition_price and condition_0b and Condition_14BeE):
             f = open("watchlist_python_bearish_engulfing", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
