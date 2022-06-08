@@ -19,6 +19,23 @@ import glob
 import math
 from functions import *
 
+import mysql.connector
+
+# Credentials to database connection
+hostname="localhost"
+dbname="stocks"
+uname="root"
+pwd="Miri142001"
+
+mydb = mysql.connector.connect(
+  host=hostname,
+  user=uname,
+  password=pwd,
+  database=dbname
+)
+
+mycursor = mydb.cursor()
+
 #https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download
 #https://www.nasdaq.com/market-activity/stocks/screener?exchange=NYSE&render=download
 
@@ -119,30 +136,37 @@ index_return = (index_df['Percent Change'] + 1).cumprod()[-1]
 # Find top 30% performing stocks (relative to the S&P 500)
 for ticker in tickers:
     # Download historical data as CSV for each stock (makes the process faster)
-    print(f'starting with ticker: {ticker}')
-    if not descarga and os.path.exists(f'{ticker}.csv'):
-        df = pd.read_csv(f'{ticker}.csv', index_col=0)      
-        print('Read CSV: {ticker}')  
-    else:
-        df = pdr.get_data_yahoo(ticker, start_date, end_date)
-        df.to_csv(f'{ticker}.csv')
-        print('Yahhoo CSV: {ticker}')  
-    
+    try: 
+        print(f'starting with ticker: {ticker}')
+        if not descarga and os.path.exists(f'{ticker}.csv'):
+            df = pd.read_csv(f'{ticker}.csv', index_col=0)      
+            print('Read CSV: {ticker}')  
+        else:
+            df = pdr.get_data_yahoo(ticker, start_date, end_date)
+            df.to_csv(f'{ticker}.csv')
+            print('Yahhoo CSV: {ticker}')  
+        
 
-    # Calculating returns relative to the market (returns multiple)
-    df['Percent Change'] = df['Adj Close'].pct_change()
-    stock_return = (df['Percent Change'] + 1).cumprod()[-1]
-    stock_return_ad = float(stock_return)
+        # Calculating returns relative to the market (returns multiple)
+        df['Percent Change'] = df['Adj Close'].pct_change()
+        stock_return = (df['Percent Change'] + 1).cumprod()[-1]
+        stock_return_ad = float(stock_return)
 
-    if math.isnan(stock_return_ad):
-        tickers.remove(ticker)
-        print("Ticker Removed: " + ticker)
-    else: 
-        returns_multiple = round((stock_return / index_return), 2)
-        returns_multiples.extend([returns_multiple])
-    
-    print (f'Ticker: {ticker}; Returns Multiple against S&P 500: {returns_multiple}\n')
+        if math.isnan(stock_return_ad):
+            #tickers.remove(ticker)
+            print("Ticker Removed: " + ticker)
+            returns_multiples.extend([0])
+        else: 
+            returns_multiple = round((stock_return / index_return), 2)
+            returns_multiples.extend([returns_multiple])
+        
+        print (f'Ticker: {ticker}; Returns Multiple against S&P 500: {returns_multiple}\n')
+    except:    
+        tickers
+        returns_multiples.extend([0])
+        print (f'Ticker: {ticker}; Has errors against S&P 500:\n')
     time.sleep(0.3)
+
 
 # Creating dataframe of only top 20%
 valueRating = 0.8
@@ -186,8 +210,17 @@ for stock in rs_stocks:
         low_of_1day = round(df["Low"][-1], 2)
         lastOpen = round(df["Open"][-1], 2)
         lastClose = round(df["Close"][-1], 2)
+        lastClose2 = round(df["Close"][-2], 2)
+        percentChange = round(((lastClose-lastClose2)/lastClose2)*100, 2)
+        netChange = round(lastClose-lastClose2, 2);
         
         stDev = df["Adj Close"][-21:].std()
+
+
+
+        mycursor.execute("""
+            Update stock_data2 set `Last Sale` = %s, Volume = %s, `% Change` = %s,  `Net Change` = %s where Symbol = %s 
+            """, (str(lastClose), str(lastDayVolume), str(percentChange), str(netChange) ,str(stock) ))
 
 
         RS_Rating = round(rs_df[rs_df['Ticker']==stock].RS_Rating.tolist()[0])
@@ -342,6 +375,9 @@ writer.save()
 writer2 = ExcelWriter("ScreenOutput2.xlsx")
 exportList2.to_excel(writer2, "Sheet1")
 writer2.save()
+
+mydb.commit()
+mydb.close()
 
 if borrado:
     fileList = glob.glob("*.csv")
