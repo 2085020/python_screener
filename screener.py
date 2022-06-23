@@ -113,6 +113,12 @@ f.write("COLUMN,0\n")
 f.write("HED,Screen Long bases\n")
 f.close()
 
+f = open("watchlist_python_posible_ND_NS", "w")
+f.write("COLUMN,0\n")
+f.write("HED,Screen Possible ND o NS\n")
+f.close()
+
+
 
 yf.pdr_override()
 
@@ -208,7 +214,7 @@ for index, row in df_tickers_final.iterrows():
 # Creating dataframe of only top 20%
 valueRating = 0.8
 #Creating dataframe of only top 30%
-valueRating = 0.6
+valueRating = 0.5
 rs_df = pd.DataFrame(list(zip(df_tickers_list['Ticker'], df_tickers_list['Industry'], returns_multiples)), columns=['Ticker', 'Industry', 'Returns_multiple'])
 rs_df['RS_Rating'] = rs_df.Returns_multiple.rank(pct=True) * 100
 rs_df_final = rs_df[rs_df.RS_Rating >= rs_df.RS_Rating.quantile(valueRating)]
@@ -230,6 +236,8 @@ for index, row in rs_df_final.iterrows():
         industry = row['Industry']
         currentClose = df["Adj Close"][-1]
         lastDayVolume = df["Volume"][-1]
+        twoDayVolume = df["Volume"][-2]
+        threeDayVolume = df["Volume"][-3]
         moving_average_50 = df["SMA_50"][-1]
         moving_average_150 = df["SMA_150"][-1]
         moving_average_200 = df["SMA_200"][-1]
@@ -350,6 +358,9 @@ for index, row in rs_df_final.iterrows():
         #Condition 14: Bearish engulfing
         Condition_14BeE = high_of_2day < lastOpen and low_of_2day > lastClose
 
+        #Condition NS ND: 2 days with low volume
+        conditionNSND = lastDayVolume < twoDayVolume and lastDayVolume < threeDayVolume
+
         # Condition 15: máximos anteriores 50 días más tarde
         # Calculo diferencia de fechas entre maximos
         date_previous_max = df["High"][-260:-50].idxmax()
@@ -457,6 +468,12 @@ for index, row in rs_df_final.iterrows():
             f = open("watchlist_python_bearish_engulfing", "a")
             f.write(f"SYM,{stock},SMART/AMEX,\n")
             f.close()
+
+        if (condition_price and conditionNSND):
+            f = open("watchlist_python_posible_ND_NS", "a")
+            f.write(f"SYM,{stock},SMART/AMEX,\n")
+            f.close()
+            
 
 
     except Exception as e:
