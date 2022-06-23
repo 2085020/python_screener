@@ -28,20 +28,24 @@ dbname="stocks"
 uname="root"
 pwd="Miri142001"
 
-mydb = mysql.connector.connect(
-  host=hostname,
-  user=uname,
-  password=pwd,
-  database=dbname
-)
+descarga = False
+borrado = True
+connectDB = True
 
-mycursor = mydb.cursor()
+if (connectDB):
+    mydb = mysql.connector.connect(
+    host=hostname,
+    user=uname,
+    password=pwd,
+    database=dbname
+    )
+
+    mycursor = mydb.cursor()
 
 #https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download
 #https://www.nasdaq.com/market-activity/stocks/screener?exchange=NYSE&render=download
 
-descarga = False
-borrado = True
+
 
 if os.path.exists("ScreenOutput.xlsx"):
     os.remove("ScreenOutput.xlsx")
@@ -124,6 +128,7 @@ df_stocks = df_stocks[df_stocks.MarketCap >= 400000000]
 df_stocks = df_stocks[df_stocks.Volume > 200000]
 myvalue = df_stocks[df_stocks.Symbol == 'AAPL']
 tickers = df_stocks['Symbol']
+
 #tickers = [item.replace(".", "-") for item in df_stocks] # Yahoo Finance uses dashes instead of dots
 
 """
@@ -161,6 +166,8 @@ index_return = (index_df['Percent Change'] + 1).cumprod()[-1]
 # List of Tickers & Industry
 df_tickers_list = pd.DataFrame(list(zip(tickers, industries)), columns=['Ticker', 'Industry'])
 df_tickers_final = df_tickers_list.reset_index()
+
+
 # Find top 30% performing stocks (relative to the S&P 500)
 #for ticker in tickers:
 for index, row in df_tickers_final.iterrows():
@@ -201,10 +208,11 @@ for index, row in df_tickers_final.iterrows():
 # Creating dataframe of only top 20%
 valueRating = 0.8
 #Creating dataframe of only top 30%
-valueRating = 0.7
+valueRating = 0.6
 rs_df = pd.DataFrame(list(zip(df_tickers_list['Ticker'], df_tickers_list['Industry'], returns_multiples)), columns=['Ticker', 'Industry', 'Returns_multiple'])
 rs_df['RS_Rating'] = rs_df.Returns_multiple.rank(pct=True) * 100
 rs_df_final = rs_df[rs_df.RS_Rating >= rs_df.RS_Rating.quantile(valueRating)]
+
 
 # Checking Minervini conditions of top 30% of stocks in given list
 #rs_stocks = rs_df['Ticker']
@@ -257,9 +265,10 @@ for index, row in rs_df_final.iterrows():
 
         RS_Rating = round(rs_df_final[rs_df_final['Ticker']==row['Ticker']].RS_Rating.tolist()[0])
 
-        mycursor.execute("""
-            Update stock_data2 set `Last Sale` = %s, Volume = %s, `% Change` = %s,  `Net Change` = %s where Symbol = %s 
-            """, (str(lastClose), str(lastDayVolume), str(percentChange), str(netChange) ,str(stock) ))
+        if (connectDB):
+            mycursor.execute("""
+                Update stock_data2 set `Last Sale` = %s, Volume = %s, `% Change` = %s,  `Net Change` = %s where Symbol = %s 
+                """, (str(lastClose), str(lastDayVolume), str(percentChange), str(netChange) ,str(stock) ))
         
         try:
             moving_average_200_20 = df["SMA_200"][-20]
@@ -477,8 +486,9 @@ exportList_minervini.to_excel(writer, "Minervini")
 exportList_longbases.to_excel(writer, "Long_Bases")
 writer.save()
 
-mydb.commit()
-mydb.close()
+if (connectDB):
+    mydb.commit()
+    mydb.close()
 
 if borrado:
     fileList = glob.glob("*.csv")
